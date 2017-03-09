@@ -1,0 +1,204 @@
+=============
+ANNOTATIONS:
+=============
+1. @Scope
+2. @Component
+3. @Service
+4. @Repository
+5. @ComponentScan
+6. @Autowire
+7. @Qualifier
+8. @Primary
+9. @Required
+10. @Value
+11. @PropertySource
+12. @ContextConfiguration
+13. @Configuration
+
+
+1. All business logic should reside in Service class
+2. Spring is all about removing configuration part from the code.
+
+================================
+3. APPLICATION CONTEXT XML
+=================================
+
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context
+                           http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:annotation-config></context:annotation-config>
+    <context:component-scan base-package="model"></context:component-scan>
+</beans>
+
+=================================================
+4. CYCLIC DEPENDENCY error
+==================================================
+
+When one bean depends on second bean and second bean depends on first bean and keeps like
+this in circular motion. Spring will  not able to identify which bean to create first and
+which bean to inject first
+
+========================================================
+5. SCOPES OF OBJECTS STORED IN SPRING CONTAINER
+========================================================
+
+@SCOPE -> It will define the scope of object (singeton, prototype)
+
+1. Singleton
+--------------
+-> Return a single bean instance per Spring IoC container
+-> We can say another way, when you define a bean definition and it is scoped as a singleton, then the Spring IoC container will create exactly one instance of the
+object defined by that bean definition. This single instance will be stored in a cache of such singleton beans, and all subsequent requests and references for that
+named bean will result in the cached object being returned.
+
+    @Service
+    @Scope("singleton")
+    public class Point
+    {
+
+
+2. Prototype Bean Scope:
+------------------------
+If scope is set to prototype, the Spring IoC container creates new bean instance of the object every time a request for that specific bean is made.
+As a rule, use the prototype scope for all state-full beans and the singleton scope for stateless beans.
+
+
+=========================
+6. @Qulaifier
+==========================
+
+                                                          public interface CustomerService {}
+
+
+       @Service("customerServiceImpl")                                                           @Service("defaultCustomerServiceImpl")
+       public class CustomerServiceImpl implements CustomerService                              public class DefaultCustomerServiceImpl implements CustomerService
+       {...}                                                                                      {....}
+
+
+
+
+         class Test {
+
+         @Autowired
+        // @Qualifier("customerServiceImpl")
+         private CustomerService customerService;
+
+         }
+
+         1. There are two ojects present in application context customerServiceImpl, defaultCustomerServiceImpl for Interface CustomerService.
+            If No Qulaifier is mentioned, then compiler will throw error :  "Could not autowire. There are 2 beans"
+
+            To avoid this, we need to use @Qulaifier. This will specify which bean to qualify out the two.
+
+
+=================
+7. @Primary
+==================
+
+@Primary annotation enables a bean that gets preference when more than one bean is qualified to autowire a single valued dependency.
+
+Example :
+----------
+
+1. public interface Animal {}
+
+2. @Component
+   @Primary
+   public class Lion implements Animal {}
+
+3. @Component
+   public class Tiger implements Animal {}
+
+4. pulic class Test {
+
+    @Autowired
+    Animal animal;
+}
+
+Application context : 2 beans : Lion, Tiger
+
+
+Output:
+-------
+
+
+Case 1.     As we have used @Primary annotation on Lion bean. This will be selected for dependency injection. Find the output.
+            --- Lion ---
+
+Case 2.      If we do not provide @Primary annotation on any bean, we will get error.
+
+            Caused by: org.springframework.beans.factory.NoUniqueBeanDefinitionException: No qualifying bean of type [com.concretepage.Animal] is defined: expected single matching bean but found 2: lion,tiger
+                at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1054)
+
+Case 3.     If we provide @Primary annotation on both the bean, we will get error.
+
+            Caused by: org.springframework.beans.factory.NoUniqueBeanDefinitionException: No qualifying bean of type [com.concretepage.Animal] is defined: more than one 'primary' bean found among candidates: [lion, tiger]
+                at org.springframework.beans.factory.support.DefaultListableBeanFactory.determinePrimaryCandidate(DefaultListableBeanFactory.java:1183)
+
+
+
+
+=================
+8. @Required
+==================
+
+Problem:
+--------
+There may be hundreds or thousands of beans declared in the IoC container,very hard for you to check if all required properties have been set or not.
+
+Solution:
+----------
+The @Required annotation is used to specify that the value of a bean property is required to be dependency injected
+
+@Required annotation is used on setters. If a property is not set it will throw:
+This annotation doesn't work with JavaConfig by default unless we register RequiredAnnotationBeanPostProcessor as a bean and override shouldSkip method:
+
+                                             @Bean
+                                                public RequiredAnnotationBeanPostProcessor processor () {
+                                                    return new RequiredAnnotationBeanPostProcessor() {
+                                                        @Override
+                                                        protected boolean shouldSkip (ConfigurableListableBeanFactory beanFactory,
+                                                                                      String beanName) {
+                                                            if (beanName.equals("clientBean")) {
+                                                                return false;
+                                                            }
+                                                            return super.shouldSkip(beanFactory, beanName);
+                                                        }
+                                                    };
+                                                }
+
+===================================================
+9. @Value : TO INJECT VALUES INTO BEAN PROPERTIES
+===================================================
+
+                @PropertySource(value = "classpath:Employee.properties")
+                public class Employee {
+
+                    @Value("${first.name}")
+                    private String fName;
+
+-> Create properties file into resources folder
+-> Set @PropertySource
+	   ----------------
+                    -------> Tell Spring from which file to read the data.
+
+-> @Value("$(propertyname)")
+
+===============================
+10. ApplicationContextAware
+===============================
+
+Suppose we have 10 modules and each module is having multiple Application Context.
+How we can pass these context to other modules ?
+Answer: Using ApplicationContextAware interface
+-------
+
+only one method : setApplicationContext()
+
+
